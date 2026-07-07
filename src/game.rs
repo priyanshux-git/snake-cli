@@ -290,17 +290,12 @@ fn save_high_score(score:&u32){
     let exe = current_exe().unwrap();
     let exe_path = exe.parent().expect("Can not find exe path");
 
-    let open = File::open(exe_path.join("high.score"));
-    if let Ok(mut f) = open {
-        f.write(score.to_string().as_bytes()).unwrap();
-    } else {
-        let create = File::create(exe_path.join("high.score"));
-        match create {
-            Ok(mut f) => {
-                f.write(score.to_string().as_bytes()).unwrap();
-            }
-            Err(e) => panic!("{e}"),
+    let create = File::create(exe_path.join("high.score"));
+    match create {
+        Ok(mut f) => {
+            f.write(score.to_string().as_bytes()).unwrap();
         }
+        Err(e) => panic!("{e}"),
     }
 }
 
