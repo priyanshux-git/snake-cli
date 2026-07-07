@@ -1,12 +1,14 @@
 mod render;
 mod snake;
+use std::io::Write;
 use std::time::{Duration, Instant};
+use std::{env::current_exe, fs::File, io::Read};
 
 use crossterm::{
     cursor,
     event::{Event, KeyCode, KeyEvent, KeyEventKind, poll},
     execute,
-    terminal::size as terminal_size,
+    terminal::{size as terminal_size, EnterAlternateScreen,enable_raw_mode,LeaveAlternateScreen,disable_raw_mode},
 };
 use rand::prelude::IndexedRandom;
 use render::render_game;
@@ -25,7 +27,7 @@ pub struct Game {
     score: u32,
     state: State,
     highscore: u32,
-    tick : Duration
+    tick: Duration,
 }
 
 impl Game {
@@ -36,8 +38,8 @@ impl Game {
             snake: snk,
             score: 0_u32,
             state: State::Over,
-            highscore: 0,
-            tick : Duration::from_millis(140)
+            highscore: get_current_high_score(),
+            tick: Duration::from_millis(140),
         }
     }
 
@@ -92,6 +94,7 @@ impl Game {
                         self.snake = Snake::new();
                         self.state = State::Over;
                         self.tick = Duration::from_millis(140);
+                        save_high_score(&self.highscore);
                     }
                     KeyCode::Char(' ') => {
                         self.state = State::Paused;
@@ -107,6 +110,7 @@ impl Game {
                         self.snake = Snake::new();
                         self.state = State::Over;
                         self.tick = Duration::from_millis(140);
+                        save_high_score(&self.highscore);
                     }
                     _ => {}
                 }
@@ -117,6 +121,7 @@ impl Game {
                         self.score = 0;
                     }
                     KeyCode::Char('q') => {
+                        save_high_score(&self.highscore);
                         return false;
                     }
                     _ => {}
@@ -142,7 +147,8 @@ impl Game {
         match self.snake.direction {
             Direction::Down => {
                 let next_pos = (c, r + 1);
-                if r + 1 > rows || (self.snake.hashed_body.contains(&next_pos) && next_pos != tail) {
+                if r + 1 > rows || (self.snake.hashed_body.contains(&next_pos) && next_pos != tail)
+                {
                     self.snake = Snake::new();
                     self.state = State::Over;
                 } else {
@@ -185,7 +191,8 @@ impl Game {
 
             Direction::Right => {
                 let next_pos = (c + 1, r);
-                if c + 1 > cols || (self.snake.hashed_body.contains(&next_pos) && next_pos != tail) {
+                if c + 1 > cols || (self.snake.hashed_body.contains(&next_pos) && next_pos != tail)
+                {
                     self.snake = Snake::new();
                     self.state = State::Over;
                 } else {
@@ -202,8 +209,8 @@ impl Game {
             if self.food == *self.snake.body.back().unwrap() {
                 self.food = spawn_food(&self.snake);
                 self.score += 1;
-                if self.score>1 && self.tick > Duration::from_millis(50) && self.score % 2 == 0  {
-                    self.tick-=Duration::from_millis(1);
+                if self.score > 1 && self.tick > Duration::from_millis(50) && self.score % 2 == 0 {
+                    self.tick -= Duration::from_millis(1);
                 }
                 if self.highscore < self.score {
                     self.highscore = self.score;
@@ -216,7 +223,8 @@ impl Game {
     }
 
     pub fn start(&mut self) {
-        execute!(std::io::stdout(), cursor::Hide).unwrap();
+        enable_raw_mode().unwrap();
+        execute!(std::io::stdout(), cursor::Hide,EnterAlternateScreen).unwrap();
         render_game(self, terminal_size().unwrap());
 
         let mut last_tick = Instant::now();
@@ -241,7 +249,9 @@ impl Game {
                 last_tick_direction = self.snake.direction;
             }
         }
-        execute!(std::io::stdout(), cursor::Show).unwrap();
+        disable_raw_mode().unwrap();
+        
+        execute!(std::io::stdout(), cursor::Show,LeaveAlternateScreen).unwrap();
     }
 }
 
@@ -265,4 +275,42 @@ pub fn spawn_food(snake: &Snake) -> (u16, u16) {
         Some(&pos) => pos,
         None => (0, 0),
     }
+}
+
+fn save_high_score(score:&u32){
+    if &get_current_high_score() >= score {
+        return;
+    }
+    let exe = current_exe().unwrap();
+    let exe_path = exe.parent().expect("Can not find exe path");
+
+    let open = File::open(exe_path.join("high.score"));
+    if let Ok(mut f) = open {
+        f.write(score.to_string().as_bytes()).unwrap();
+    } else {
+        let create = File::create(exe_path.join("high.score"));
+        match create {
+            Ok(mut f) => {
+                f.write(score.to_string().as_bytes()).unwrap();
+            }
+            Err(e) => panic!("{e}"),
+        }
+    }
+}
+
+fn get_current_high_score() -> u32{
+    let exe = current_exe().unwrap();
+    let exe_path = exe.parent().expect("Can not find exe path");
+    
+    let open = File::open(exe_path.join("high.score"));
+    let mut buf = String::new();
+    if let Ok(mut f) = open {
+        f.read_to_string(&mut buf).unwrap();
+        if buf.is_empty(){
+            return 0;
+        }else {
+            return buf.trim().parse::<u32>().unwrap();
+        }
+    }
+    0
 }
