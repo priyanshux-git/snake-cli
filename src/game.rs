@@ -151,6 +151,7 @@ impl Game {
                 {
                     self.snake = Snake::new();
                     self.state = State::Over;
+                    save_high_score(&self.highscore);
                 } else {
                     self.snake.hashed_body.insert(next_pos);
                     self.snake.body.push_back(next_pos);
@@ -161,11 +162,13 @@ impl Game {
                 if r <= 0 {
                     self.snake = Snake::new();
                     self.state = State::Over;
+                    save_high_score(&self.highscore);
                 } else {
                     let next_pos = (c, r - 1);
                     if self.snake.hashed_body.contains(&next_pos) && next_pos != tail {
                         self.snake = Snake::new();
                         self.state = State::Over;
+                        save_high_score(&self.highscore);
                     } else {
                         self.snake.hashed_body.insert(next_pos);
                         self.snake.body.push_back(next_pos);
@@ -177,11 +180,13 @@ impl Game {
                 if c <= 0 {
                     self.snake = Snake::new();
                     self.state = State::Over;
+                    save_high_score(&self.highscore);
                 } else {
                     let next_pos = (c - 1, r);
                     if self.snake.hashed_body.contains(&next_pos) && next_pos != tail {
                         self.snake = Snake::new();
                         self.state = State::Over;
+                        save_high_score(&self.highscore);
                     } else {
                         self.snake.hashed_body.insert(next_pos);
                         self.snake.body.push_back(next_pos);
@@ -195,6 +200,7 @@ impl Game {
                 {
                     self.snake = Snake::new();
                     self.state = State::Over;
+                    save_high_score(&self.highscore);
                 } else {
                     self.snake.hashed_body.insert(next_pos);
                     self.snake.body.push_back(next_pos);
